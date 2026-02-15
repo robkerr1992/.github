@@ -55,8 +55,8 @@ jobs:
 
       - name: Install Harbor
         run: |
-          curl -sL https://github.com/austenke/harbor/releases/latest/download/harbor_linux_amd64.tar.gz | tar xz
-          mv harbor /usr/local/bin/
+          curl -sL https://github.com/mehrancodes/laravel-harbor/releases/latest/download/harbor -o /usr/local/bin/harbor
+          chmod +x /usr/local/bin/harbor
 
       - name: Provision with Harbor
         env:
