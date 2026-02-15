@@ -1,0 +1,26 @@
+name: Laravel Lint
+
+on:
+  workflow_call:
+    inputs:
+      php-version:
+        type: string
+        default: '8.4'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Run PHP Pint
+        run: vendor/bin/pint --test

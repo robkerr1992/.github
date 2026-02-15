@@ -1,0 +1,56 @@
+name: Laravel Tests
+
+on:
+  workflow_call:
+    inputs:
+      php-versions:
+        type: string
+        default: '["8.3","8.4"]'
+      node-build:
+        type: boolean
+        default: false
+      node-version:
+        type: string
+        default: '20'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ${{ fromJson(inputs.php-versions) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Setup Node.js
+        if: ${{ inputs.node-build }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install NPM dependencies
+        if: ${{ inputs.node-build }}
+        run: npm ci
+
+      - name: Build assets
+        if: ${{ inputs.node-build }}
+        run: npm run build
+
+      - name: Run tests
+        run: php artisan test

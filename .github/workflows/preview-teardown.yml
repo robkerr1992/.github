@@ -1,0 +1,46 @@
+name: Preview Teardown
+
+on:
+  workflow_call:
+    secrets:
+      FORGE_TOKEN:
+        required: true
+      FORGE_SERVER:
+        required: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      teardown: ${{ steps.check-title.outputs.teardown }}
+    steps:
+      - name: Check PR title
+        id: check-title
+        run: |
+          if [[ "${{ github.event.pull_request.title }}" == *"[preview]"* ]]; then
+            echo "teardown=true" >> $GITHUB_OUTPUT
+          else
+            echo "teardown=false" >> $GITHUB_OUTPUT
+          fi
+
+  teardown:
+    needs: check
+    if: needs.check.outputs.teardown == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Harbor
+        run: |
+          curl -sL https://github.com/austenke/harbor/releases/latest/download/harbor_linux_amd64.tar.gz | tar xz
+          sudo mv harbor /usr/local/bin/
+
+      - name: Run Harbor teardown
+        env:
+          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
+          FORGE_SERVER: ${{ secrets.FORGE_SERVER }}
+          FORGE_GIT_REPOSITORY: ${{ github.repository }}
+          FORGE_GIT_BRANCH: ${{ github.head_ref }}
+          FORGE_DOMAIN: preview.intentional.systems
+        run: harbor teardown
