@@ -19,6 +19,12 @@ on:
         required: true
       FORGE_DB_PASSWORD:
         required: true
+      FORGE_STRIPE_KEY:
+        required: false
+      FORGE_STRIPE_SECRET:
+        required: false
+      FORGE_STRIPE_WEBHOOK_SECRET:
+        required: false
 
 jobs:
   check:
@@ -69,6 +75,9 @@ jobs:
           FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
           FORGE_SERVER: ${{ secrets.FORGE_SERVER }}
           FORGE_DB_PASSWORD: ${{ secrets.FORGE_DB_PASSWORD }}
+          FORGE_STRIPE_KEY: ${{ secrets.FORGE_STRIPE_KEY }}
+          FORGE_STRIPE_SECRET: ${{ secrets.FORGE_STRIPE_SECRET }}
+          FORGE_STRIPE_WEBHOOK_SECRET: ${{ secrets.FORGE_STRIPE_WEBHOOK_SECRET }}
         run: |
           # Derive site name (keep hyphens)
           BRANCH="${{ github.head_ref }}"
@@ -152,8 +161,22 @@ jobs:
           AWS_USE_PATH_STYLE_ENDPOINT=false
           
           VITE_APP_NAME="\${{ inputs.app-name }}"
-          ${{ inputs.extra-env }}
           EOF
+          
+          # Append extra-env input if provided
+          EXTRA_ENV="${{ inputs.extra-env }}"
+          if [ -n "$EXTRA_ENV" ]; then
+            echo "$EXTRA_ENV" >> .env
+          fi
+          
+          # Append Stripe secrets if provided
+          if [ -n "${FORGE_STRIPE_KEY:-}" ]; then
+            cat >> .env << EOF
+          STRIPE_KEY=${FORGE_STRIPE_KEY}
+          STRIPE_SECRET=${FORGE_STRIPE_SECRET}
+          STRIPE_WEBHOOK_SECRET=${FORGE_STRIPE_WEBHOOK_SECRET}
+          EOF
+          fi
           
           # Run Laravel commands
           php artisan key:generate
