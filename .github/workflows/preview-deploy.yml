@@ -87,10 +87,10 @@ jobs:
           SITE_NAME=$(echo "$BRANCH" | tr -cd '[:alnum:]-')
           echo "Site name: $SITE_NAME"
           
-          # Look up site ID via Forge API
+          # Look up site ID via Forge API (using python3 instead of jq for container compat)
           SITE_ID=$(curl -s -H "Authorization: Bearer $FORGE_TOKEN" \
             "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites" | \
-            jq -r ".sites[] | select(.name == \"$SITE_NAME\") | .id")
+            python3 -c "import sys,json; sites=json.load(sys.stdin)['sites']; print(next((s['id'] for s in sites if s['name']=='$SITE_NAME'),''))")
           echo "Site ID: $SITE_ID"
           
           # Grant forge DB user access to all databases
