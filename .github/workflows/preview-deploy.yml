@@ -69,62 +69,6 @@ jobs:
         run: |
           harbor provision
 
-      - name: Debug Forge token access
-        env:
-          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
-          FORGE_SERVER: ${{ secrets.FORGE_SERVER }}
-        run: |
-          BRANCH="${{ github.head_ref }}"
-          SITE_NAME=$(echo "$BRANCH" | tr -cd '[:alnum:]-')
-          SITE_DOMAIN="${SITE_NAME}.preview.intentional.systems"
-
-          echo "=== Debug: Token length ==="
-          echo "${#FORGE_TOKEN} characters"
-
-          echo "=== Debug: List sites (GET) ==="
-          LIST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer $FORGE_TOKEN" \
-            -H "Accept: application/json" \
-            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites")
-          echo "List sites: HTTP $LIST_STATUS"
-
-          # Find site ID
-          SITES_JSON=$(curl -s -H "Authorization: Bearer $FORGE_TOKEN" \
-            -H "Accept: application/json" \
-            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites")
-          SITE_ID=$(echo "$SITES_JSON" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          for s in data.get('sites', []):
-              if '$SITE_DOMAIN' in s.get('name','') or '$SITE_NAME' in s.get('name',''):
-                  print(s['id']); break
-          else:
-              print('')
-          ")
-          echo "Site ID: $SITE_ID"
-
-          echo "=== Debug: GET env ==="
-          GET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer $FORGE_TOKEN" \
-            -H "Accept: application/json" \
-            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/env")
-          echo "GET /env: HTTP $GET_STATUS"
-
-          echo "=== Debug: PUT env (dry run) ==="
-          PUT_RESPONSE=$(curl -s -w "\n%{http_code}" \
-            -X PUT \
-            -H "Authorization: Bearer $FORGE_TOKEN" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d '{"content":"APP_NAME=DebugTest"}' \
-            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/env")
-          PUT_STATUS=$(echo "$PUT_RESPONSE" | tail -1)
-          PUT_BODY=$(echo "$PUT_RESPONSE" | sed '$d')
-          echo "PUT /env: HTTP $PUT_STATUS"
-          if [ "$PUT_STATUS" != "200" ]; then
-            echo "PUT /env response body: $PUT_BODY"
-          fi
-
       - name: Configure environment on Forge
         env:
           FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
@@ -236,6 +180,30 @@ jobs:
             exit 1
           fi
           echo "Env updated: HTTP $ENV_STATUS"
+
+          # Provision Let's Encrypt SSL if not already secured
+          SITE_JSON=$(curl -s \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Accept: application/json" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID")
+          IS_SECURED=$(echo "$SITE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('site',{}).get('is_secured',False))")
+
+          if [ "$IS_SECURED" = "False" ] || [ "$IS_SECURED" = "false" ]; then
+            echo "Site not secured — provisioning Let's Encrypt SSL..."
+            SSL_RESPONSE=$(curl -s -w "\n%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer $FORGE_TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d "{\"domains\":[\"$SITE_DOMAIN\"]}" \
+              "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/certificates/letsencrypt")
+            SSL_STATUS=$(echo "$SSL_RESPONSE" | tail -1)
+            echo "SSL cert requested: HTTP $SSL_STATUS"
+            # Give Let's Encrypt a moment to provision
+            sleep 15
+          else
+            echo "Site already secured with SSL"
+          fi
 
           # Trigger deploy
           DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" \
