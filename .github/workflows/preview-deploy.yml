@@ -34,8 +34,11 @@ jobs:
     steps:
       - name: Check PR title and draft status
         id: check-title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
         run: |
-          if [[ "${{ github.event.pull_request.title }}" == *"[preview]"* && "${{ github.event.pull_request.draft }}" != "true" ]]; then
+          if [[ "$PR_TITLE" == *"[preview]"* && "$PR_DRAFT" != "true" ]]; then
             echo "deploy=true" >> $GITHUB_OUTPUT
           else
             echo "deploy=false" >> $GITHUB_OUTPUT
