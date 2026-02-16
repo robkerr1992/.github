@@ -181,6 +181,52 @@ jobs:
           fi
           echo "Env updated: HTTP $ENV_STATUS"
 
+          # Update deploy script (Harbor's default is bare-bones git pull only)
+          HAS_NODE="${{ inputs.has-node-build }}"
+          DEPLOY_SCRIPT="cd /home/forge/\$FORGE_SITE_NAME
+          git pull origin \$FORGE_SITE_BRANCH
+
+          \$FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader"
+
+          if [ "$HAS_NODE" = "true" ]; then
+            DEPLOY_SCRIPT="${DEPLOY_SCRIPT}
+
+          npm ci
+          npm run build"
+          fi
+
+          DEPLOY_SCRIPT="${DEPLOY_SCRIPT}
+
+          # Reload PHP FPM
+          ( flock -w 10 9 || exit 1
+              echo 'Reloading PHP FPM...'
+              sudo -S service \$FORGE_PHP_FPM reload
+          ) 9>/tmp/fpmlock
+
+          if [ -f artisan ]; then
+              \$FORGE_PHP artisan key:generate --force
+              \$FORGE_PHP artisan migrate --force
+              \$FORGE_PHP artisan optimize
+          fi"
+
+          echo "$DEPLOY_SCRIPT" > /tmp/deploy_script.txt
+          SCRIPT_JSON=$(python3 -c "
+          import json
+          with open('/tmp/deploy_script.txt') as f:
+              content = f.read().strip()
+          print(json.dumps({'content': content}))
+          ")
+
+          SCRIPT_RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X PUT \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "$SCRIPT_JSON" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/deployment/script")
+          SCRIPT_STATUS=$(echo "$SCRIPT_RESPONSE" | tail -1)
+          echo "Deploy script updated: HTTP $SCRIPT_STATUS"
+
           # Provision Let's Encrypt SSL if not already secured
           SITE_JSON=$(curl -s \
             -H "Authorization: Bearer $FORGE_TOKEN" \
