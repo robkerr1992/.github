@@ -78,7 +78,7 @@ jobs:
             fi
 
             $FORGE_PHP artisan key:generate --force --no-interaction
-            $FORGE_PHP artisan migrate --force --no-interaction
+            $FORGE_PHP artisan migrate:fresh --force --no-interaction --seed
             $FORGE_PHP artisan config:cache
             $FORGE_PHP artisan route:cache
             $FORGE_PHP artisan view:cache
@@ -233,7 +233,7 @@ jobs:
           fi
 
           $FORGE_PHP artisan key:generate --force --no-interaction
-          $FORGE_PHP artisan migrate --force --no-interaction
+          $FORGE_PHP artisan migrate:fresh --force --no-interaction --seed
           $FORGE_PHP artisan config:cache
           $FORGE_PHP artisan route:cache
           $FORGE_PHP artisan view:cache'
