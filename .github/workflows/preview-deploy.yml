@@ -66,6 +66,22 @@ jobs:
           FORGE_GIT_BRANCH: ${{ github.head_ref }}
           FORGE_DOMAIN: preview.intentional.systems
           FORGE_DB_PASSWORD: ${{ secrets.FORGE_DB_PASSWORD }}
+          FORGE_DEPLOY_SCRIPT: |
+            cd $FORGE_SITE_PATH
+            git pull origin $FORGE_SITE_BRANCH
+
+            $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            if [ -f "$FORGE_SITE_PATH/package.json" ]; then
+              npm ci --prefix $FORGE_SITE_PATH
+              npm run build --prefix $FORGE_SITE_PATH
+            fi
+
+            $FORGE_PHP artisan key:generate --force --no-interaction
+            $FORGE_PHP artisan migrate --force --no-interaction
+            $FORGE_PHP artisan config:cache
+            $FORGE_PHP artisan route:cache
+            $FORGE_PHP artisan view:cache
         run: |
           harbor provision
 
