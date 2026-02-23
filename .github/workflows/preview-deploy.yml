@@ -221,6 +221,40 @@ jobs:
             echo "Site already secured with SSL"
           fi
 
+          # Fetch current deploy script and quick-deploy status for debugging
+          echo "=== Site Deployment Config ==="
+          SITE_DETAIL=$(curl -s \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Accept: application/json" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID")
+          echo "$SITE_DETAIL" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin).get('site', {})
+          print(f\"Quick deploy enabled: {data.get('quick_deploy', 'N/A')}\")
+          print(f\"Deployment status: {data.get('deployment_status', 'N/A')}\")
+          print(f\"Repository: {data.get('repository', 'N/A')}\")
+          print(f\"Branch: {data.get('repository_branch', 'N/A')}\")
+          print(f\"Project type: {data.get('project_type', 'N/A')}\")
+          print(f\"PHP version: {data.get('php_version', 'N/A')}\")
+          "
+
+          DEPLOY_SCRIPT=$(curl -s \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Accept: application/json" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/deployment/script")
+          echo "--- Current Deploy Script on Forge ---"
+          echo "$DEPLOY_SCRIPT"
+          echo "--- End Deploy Script ---"
+          echo "=== End Site Config ==="
+
+          # Enable quick deploy if not already enabled
+          echo "Enabling quick deploy..."
+          curl -s -X POST \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Accept: application/json" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/sites/$SITE_ID/deployment"
+          echo ""
+
           # Trigger deploy
           DEPLOY_RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST \
