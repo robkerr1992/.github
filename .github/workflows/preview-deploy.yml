@@ -123,6 +123,39 @@ jobs:
             exit 0
           fi
 
+          # Create database if it doesn't already exist
+          echo "Checking if database '$SITE_NAME' exists..."
+          EXISTING_DBS=$(curl -s \
+            -H "Authorization: Bearer $FORGE_TOKEN" \
+            -H "Accept: application/json" \
+            "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/databases")
+          DB_EXISTS=$(echo "$EXISTING_DBS" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for db in data.get('databases', []):
+              if db.get('name') == '$SITE_NAME':
+                  print('true'); break
+          else:
+              print('false')
+          ")
+
+          if [ "$DB_EXISTS" = "false" ]; then
+            echo "Creating database '$SITE_NAME'..."
+            DB_RESPONSE=$(curl -s -w "\n%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer $FORGE_TOKEN" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d "{\"name\":\"$SITE_NAME\",\"user\":\"forge\",\"password\":\"${FORGE_DB_PASSWORD}\"}" \
+              "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/databases")
+            DB_STATUS=$(echo "$DB_RESPONSE" | tail -1)
+            echo "Database created: HTTP $DB_STATUS"
+            # Give MySQL a moment to provision the database
+            sleep 5
+          else
+            echo "Database '$SITE_NAME' already exists"
+          fi
+
           # Build .env content
           ENV_CONTENT="APP_NAME=${{ inputs.app-name }}
           APP_ENV=staging
