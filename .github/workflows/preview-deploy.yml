@@ -148,9 +148,15 @@ jobs:
               -H "Authorization: Bearer $FORGE_TOKEN" \
               -H "Content-Type: application/json" \
               -H "Accept: application/json" \
-              -d "{\"name\":\"$DB_NAME\",\"user\":\"forge\",\"password\":\"${FORGE_DB_PASSWORD}\"}" \
+              -d "{\"name\":\"$DB_NAME\"}" \
               "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/databases")
             DB_STATUS=$(echo "$DB_RESPONSE" | tail -1)
+            DB_BODY=$(echo "$DB_RESPONSE" | sed '$d')
+            if [ "$DB_STATUS" != "200" ]; then
+              echo "::error::Failed to create database: HTTP $DB_STATUS"
+              echo "Response: $DB_BODY"
+              exit 1
+            fi
             echo "Database created: HTTP $DB_STATUS"
             # Give MySQL a moment to provision the database
             sleep 5
