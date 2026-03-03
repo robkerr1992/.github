@@ -18,11 +18,11 @@ on:
         description: 'Wait for deploy to complete and output the Forge deploy log'
     secrets:
       FORGE_TOKEN:
-        required: true
+        required: false
       FORGE_SERVER:
-        required: true
+        required: false
       FORGE_DB_PASSWORD:
-        required: true
+        required: false
       FORGE_STRIPE_KEY:
         required: false
       FORGE_STRIPE_SECRET:

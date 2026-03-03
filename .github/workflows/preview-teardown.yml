@@ -4,9 +4,9 @@ on:
   workflow_call:
     secrets:
       FORGE_TOKEN:
-        required: true
+        required: false
       FORGE_SERVER:
-        required: true
+        required: false
 
 jobs:
   check:
