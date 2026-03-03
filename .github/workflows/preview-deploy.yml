@@ -100,6 +100,7 @@ jobs:
         run: |
           BRANCH="${{ github.head_ref }}"
           SITE_NAME=$(echo "$BRANCH" | tr -cd '[:alnum:]-')
+          DB_NAME=$(echo "$SITE_NAME" | tr '-' '_')
           SITE_DOMAIN="${SITE_NAME}.preview.intentional.systems"
           echo "Looking up site: $SITE_DOMAIN"
 
@@ -124,7 +125,8 @@ jobs:
           fi
 
           # Create database if it doesn't already exist
-          echo "Checking if database '$SITE_NAME' exists..."
+          # DB_NAME uses underscores (MySQL-safe), SITE_NAME uses hyphens (domain-safe)
+          echo "Checking if database '$DB_NAME' exists..."
           EXISTING_DBS=$(curl -s \
             -H "Authorization: Bearer $FORGE_TOKEN" \
             -H "Accept: application/json" \
@@ -133,27 +135,27 @@ jobs:
           import sys, json
           data = json.load(sys.stdin)
           for db in data.get('databases', []):
-              if db.get('name') == '$SITE_NAME':
+              if db.get('name') == '$DB_NAME':
                   print('true'); break
           else:
               print('false')
           ")
 
           if [ "$DB_EXISTS" = "false" ]; then
-            echo "Creating database '$SITE_NAME'..."
+            echo "Creating database '$DB_NAME'..."
             DB_RESPONSE=$(curl -s -w "\n%{http_code}" \
               -X POST \
               -H "Authorization: Bearer $FORGE_TOKEN" \
               -H "Content-Type: application/json" \
               -H "Accept: application/json" \
-              -d "{\"name\":\"$SITE_NAME\",\"user\":\"forge\",\"password\":\"${FORGE_DB_PASSWORD}\"}" \
+              -d "{\"name\":\"$DB_NAME\",\"user\":\"forge\",\"password\":\"${FORGE_DB_PASSWORD}\"}" \
               "https://forge.laravel.com/api/v1/servers/$FORGE_SERVER/databases")
             DB_STATUS=$(echo "$DB_RESPONSE" | tail -1)
             echo "Database created: HTTP $DB_STATUS"
             # Give MySQL a moment to provision the database
             sleep 5
           else
-            echo "Database '$SITE_NAME' already exists"
+            echo "Database '$DB_NAME' already exists"
           fi
 
           # Build .env content
@@ -175,7 +177,7 @@ jobs:
           DB_CONNECTION=mysql
           DB_HOST=127.0.0.1
           DB_PORT=3306
-          DB_DATABASE=${SITE_NAME}
+          DB_DATABASE=${DB_NAME}
           DB_USERNAME=forge
           DB_PASSWORD=${FORGE_DB_PASSWORD}
           SESSION_DRIVER=database
