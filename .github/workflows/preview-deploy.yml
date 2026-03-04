@@ -74,7 +74,7 @@ jobs:
             cd $FORGE_SITE_PATH
             git pull origin $FORGE_SITE_BRANCH
 
-            $FORGE_COMPOSER install --no-interaction --prefer-dist --optimize-autoloader
+            $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
             if [ -f "$FORGE_SITE_PATH/package.json" ]; then
               npm ci --prefix $FORGE_SITE_PATH
@@ -82,7 +82,7 @@ jobs:
             fi
 
             $FORGE_PHP artisan key:generate --force --no-interaction
-            $FORGE_PHP artisan migrate:fresh --force --no-interaction --seed
+            $FORGE_PHP artisan migrate:fresh --force --no-interaction
             $FORGE_PHP artisan config:cache
             $FORGE_PHP artisan route:cache
             $FORGE_PHP artisan view:cache
@@ -270,7 +270,7 @@ jobs:
           DEPLOY_SCRIPT='cd $FORGE_SITE_PATH
           git pull origin $FORGE_SITE_BRANCH
 
-          $FORGE_COMPOSER install --no-interaction --prefer-dist --optimize-autoloader
+          $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
           if [ -f "$FORGE_SITE_PATH/package.json" ]; then
             npm ci --prefix $FORGE_SITE_PATH
@@ -278,7 +278,7 @@ jobs:
           fi
 
           $FORGE_PHP artisan key:generate --force --no-interaction
-          $FORGE_PHP artisan migrate:fresh --force --no-interaction --seed
+          $FORGE_PHP artisan migrate:fresh --force --no-interaction
           $FORGE_PHP artisan config:cache
           $FORGE_PHP artisan route:cache
           $FORGE_PHP artisan view:cache'
