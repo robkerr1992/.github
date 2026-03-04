@@ -74,7 +74,7 @@ jobs:
             cd $FORGE_SITE_PATH
             git pull origin $FORGE_SITE_BRANCH
 
-            $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            $FORGE_COMPOSER install --no-interaction --prefer-dist --optimize-autoloader
 
             if [ -f "$FORGE_SITE_PATH/package.json" ]; then
               npm ci --prefix $FORGE_SITE_PATH
@@ -270,7 +270,7 @@ jobs:
           DEPLOY_SCRIPT='cd $FORGE_SITE_PATH
           git pull origin $FORGE_SITE_BRANCH
 
-          $FORGE_COMPOSER install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          $FORGE_COMPOSER install --no-interaction --prefer-dist --optimize-autoloader
 
           if [ -f "$FORGE_SITE_PATH/package.json" ]; then
             npm ci --prefix $FORGE_SITE_PATH
